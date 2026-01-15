@@ -9,27 +9,42 @@ export async function getStockData(symbol: string) {
     : `${symbol.toUpperCase()}.SA`;
 
   try {
-    const result: any = await yf.quote(yahooSymbol);
+    const [quote, summary]: any = await Promise.all([
+      yf.quote(yahooSymbol),
+      yf.quoteSummary(yahooSymbol, {
+        modules: ['summaryDetail', 'defaultKeyStatistics', 'financialData']
+      })
+    ]);
 
-    if (!result) {
+    if (!quote) {
       throw new Error('Ativo não encontrado.');
     }
 
+    const { summaryDetail, defaultKeyStatistics, financialData } = summary;
+
     return {
-      symbol: result.symbol,
-      price: result.regularMarketPrice,
-      change: result.regularMarketChange,
-      changePercent: result.regularMarketChangePercent,
-      name: result.longName || result.shortName || result.symbol,
-      currency: result.currency,
-      updatedAt: result.regularMarketTime,
+      symbol: quote.symbol,
+      price: quote.regularMarketPrice,
+      change: quote.regularMarketChange,
+      changePercent: quote.regularMarketChangePercent,
+      name: quote.longName || quote.shortName || quote.symbol,
+      currency: quote.currency,
+      updatedAt: quote.regularMarketTime,
       // Dados adicionais para análise profissional
-      fiftyTwoWeekHigh: result.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: result.fiftyTwoWeekLow,
-      regularMarketVolume: result.regularMarketVolume,
-      averageDailyVolume3Month: result.averageDailyVolume3Month,
-      marketCap: result.marketCap,
-      trailingPE: result.trailingPE,
+      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+      regularMarketVolume: quote.regularMarketVolume,
+      averageDailyVolume3Month: quote.averageDailyVolume3Month,
+      marketCap: quote.marketCap,
+      trailingPE: quote.trailingPE,
+      // Dados para cálculos (Graham, Bazin, etc)
+      eps: defaultKeyStatistics?.trailingEps || 0,
+      bvps: defaultKeyStatistics?.bookValue || 0,
+      dividendRate: summaryDetail?.dividendRate || 0,
+      dividendYield: summaryDetail?.dividendYield || 0,
+      targetLowPrice: financialData?.targetLowPrice || 0,
+      targetMeanPrice: financialData?.targetMeanPrice || 0,
+      targetHighPrice: financialData?.targetHighPrice || 0,
     };
   } catch (error: any) {
     console.error(`[Yahoo Finance Service Error] ${yahooSymbol}:`, error.message);
@@ -68,19 +83,31 @@ export async function getHistoricalData(symbol: string, period: string = '1Y') {
       period1: startOfDay(from),
       period2: now,
       interval: (period === '5Y' ? '1wk' : '1d') as any,
+      events: 'div', // Fetch dividend events
     };
 
     const result = await yf.chart(yahooSymbol, queryOptions);
 
+    const quotes = result.quotes || [];
+    const dividends = result.events?.dividends || [];
+
     // O retorno do chart() no modo array tem uma estrutura result.quotes
-    return (result.quotes || []).map(item => ({
-      date: item.date,
-      open: item.open,
-      high: item.high,
-      low: item.low,
-      close: item.close,
-      volume: item.volume,
-    }));
+    return quotes.map(item => {
+      // Find dividend for this date (if any)
+      const dateStr = item.date.toISOString().split('T')[0];
+      const dividend = dividends.find(d => d.date.toISOString().split('T')[0] === dateStr);
+
+      return {
+        date: item.date,
+        open: item.open,
+        high: item.high,
+        low: item.low,
+        close: item.close,
+        volume: item.volume,
+        dividend: dividend ? dividend.amount : null,
+        yieldPercent: (dividend && item.close) ? (dividend.amount / item.close) * 100 : null,
+      };
+    });
   } catch (error: any) {
     console.error(`[Yahoo Finance Chart Error] ${yahooSymbol}:`, error.message);
     throw new Error('Falha ao buscar dados históricos via Chart API.');

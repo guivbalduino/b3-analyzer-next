@@ -5,6 +5,8 @@ import Image from "next/image";
 import { Search, TrendingUp, Calendar, Info, Activity } from "lucide-react";
 import ChartSection from "@/components/ChartSection";
 import StatisticsGrid from "@/components/StatisticsGrid";
+import DividendChart from "@/components/DividendChart";
+import AnalysisSection from "@/components/AnalysisSection";
 
 interface StockData {
   symbol: string;
@@ -20,11 +22,17 @@ interface StockData {
   averageDailyVolume3Month: number;
   marketCap: number;
   trailingPE: number;
+  eps: number;
+  bvps: number;
+  dividendRate: number;
+  targetMeanPrice: number;
 }
 
 interface HistoricalData {
   date: string;
   close: number;
+  dividend: number | null;
+  yieldPercent: number | null;
 }
 
 export default function Home() {
@@ -92,8 +100,8 @@ export default function Home() {
   }, [period, data?.symbol, fetchHistorical]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 p-4 md:p-8">
-      <main className="max-w-6xl mx-auto flex flex-col gap-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 p-4 md:p-10">
+      <main className="max-w-full mx-auto flex flex-col gap-8">
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm">
           <div className="flex items-center gap-4">
@@ -135,9 +143,9 @@ export default function Home() {
         )}
 
         {data && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Left Column: Price & Stats */}
-            <div className="lg:col-span-1 flex flex-col gap-6">
+            <div className="lg:col-span-1 flex flex-col gap-8">
               <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm h-fit">
                 <div className="mb-6">
                   <h2 className="text-4xl font-black">{data.symbol}</h2>
@@ -171,8 +179,8 @@ export default function Home() {
               <StatisticsGrid data={data} />
             </div>
 
-            {/* Right Column: Chart */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
+            {/* Middle Column: Charts */}
+            <div className="lg:col-span-2 flex flex-col gap-8">
               <div className="flex items-center justify-between px-4">
                 <div className="flex gap-2">
                   {["1M", "6M", "1Y", "5Y"].map((p) => (
@@ -190,16 +198,21 @@ export default function Home() {
                 </div>
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                   <Activity size={12} />
-                  Volume em Tempo Real
+                  Análise Técnica Expandida
                 </div>
               </div>
 
               <ChartSection data={historicalData} loading={historicalLoading} />
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <DividendChart data={historicalData} loading={historicalLoading} type="value" />
+                <DividendChart data={historicalData} loading={historicalLoading} type="yield" />
+              </div>
+
               <div className="p-8 bg-zinc-900 dark:bg-zinc-100 rounded-[2.5rem] text-white dark:text-zinc-900 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest opacity-60 mb-1">Dica Profissional</p>
-                  <p className="font-bold">Analise as médias móveis e o Market Cap para decisões de longo prazo.</p>
+                  <p className="font-bold">Analise as médias móveis, dividendos e Market Cap para decisões de longo prazo.</p>
                 </div>
                 <div className="hidden md:block">
                   <div className="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center font-black">
@@ -207,6 +220,15 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Right Column: Analysis */}
+            <div className="lg:col-span-1 flex flex-col gap-8">
+              <AnalysisSection
+                data={data}
+                historicalData={historicalData}
+                loading={historicalLoading}
+              />
             </div>
           </div>
         )}
