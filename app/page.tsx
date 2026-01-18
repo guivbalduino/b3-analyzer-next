@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Image from "next/image";
-import { Search, TrendingUp, Calendar, Info, Activity } from "lucide-react";
+import { Search, TrendingUp, Calendar, Info, Activity, Star, ArrowUpRight } from "lucide-react";
 import ChartSection from "@/components/ChartSection";
 import StatisticsGrid from "@/components/StatisticsGrid";
 import DividendChart from "@/components/DividendChart";
 import AnalysisSection from "@/components/AnalysisSection";
+import TimeMachine from "@/components/TimeMachine";
+import { useUserActions } from "@/hooks/useUserActions";
 
 interface StockData {
   symbol: string;
@@ -44,6 +47,8 @@ export default function Home() {
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { addToHistory, toggleFavorite, isFavorite, favorites, recentSearches } = useUserActions();
+
   const fetchHistorical = useCallback(async (s: string, p: string) => {
     setHistoricalLoading(true);
     try {
@@ -59,9 +64,17 @@ export default function Home() {
     }
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!symbol) return;
+  const handleSearch = useCallback(async (e: React.FormEvent | string) => {
+    let ticker = "";
+    if (typeof e === "string") {
+      ticker = e;
+      setSymbol(e);
+    } else {
+      e.preventDefault();
+      ticker = symbol;
+    }
+
+    if (!ticker) return;
 
     setLoading(true);
     setError("");
@@ -69,7 +82,7 @@ export default function Home() {
     setHistoricalData([]);
 
     try {
-      const res = await fetch(`/api/stock/${symbol}`);
+      const res = await fetch(`/api/stock/${ticker}`);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -84,14 +97,24 @@ export default function Home() {
 
       const result = await res.json();
       setData(result);
+      addToHistory(result.symbol); // Add to history on success
       // Busca o histórico inicial (1Y)
-      fetchHistorical(symbol, period);
+      fetchHistorical(ticker, period);
     } catch (err) {
       setError("Não foi possível conectar ao servidor.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [symbol, period, fetchHistorical, addToHistory]);
+
+  // Handle URL search params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("symbol");
+    if (s) {
+      handleSearch(s);
+    }
+  }, [handleSearch]);
 
   useEffect(() => {
     if (data?.symbol) {
@@ -105,15 +128,33 @@ export default function Home() {
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/20">
-              <TrendingUp className="text-white" size={32} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">
-                B3 <span className="text-emerald-500">Analyzer</span>
-              </h1>
-              <p className="text-zinc-500 text-sm font-medium">Terminal de Análise Técnica</p>
-            </div>
+            <Link href="/" className="flex items-center gap-4 group">
+              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <TrendingUp className="text-white" size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight">
+                  B3 <span className="text-emerald-500">Analyzer</span>
+                </h1>
+                <p className="text-zinc-500 text-sm font-medium">Terminal de Análise Técnica</p>
+              </div>
+            </Link>
+
+            <Link
+              href={data ? `/compare?t1=${data.symbol}` : "/compare"}
+              className="ml-4 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold rounded-xl text-xs hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
+            >
+              <Activity size={14} />
+              COMPARAR
+            </Link>
+
+            <Link
+              href="/favoritos"
+              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold rounded-xl text-xs hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2"
+            >
+              <Star size={14} />
+              FAVORITOS
+            </Link>
           </div>
 
           <form onSubmit={handleSearch} className="flex-1 max-w-md w-full relative">
@@ -142,14 +183,22 @@ export default function Home() {
           </div>
         )}
 
-        {data && (
+        {data ? (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Left Column: Price & Stats */}
             <div className="lg:col-span-1 flex flex-col gap-8">
               <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm h-fit">
-                <div className="mb-6">
-                  <h2 className="text-4xl font-black">{data.symbol}</h2>
-                  <p className="text-zinc-500 font-bold tracking-tight">{data.name}</p>
+                <div className="mb-6 flex justify-between items-start">
+                  <div>
+                    <h2 className="text-4xl font-black">{data.symbol}</h2>
+                    <p className="text-zinc-500 font-bold tracking-tight">{data.name}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleFavorite(data.symbol, data.name)}
+                    className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:scale-105 active:scale-95 transition-all text-amber-400"
+                  >
+                    <span className={`text-2xl ${isFavorite(data.symbol) ? "opacity-100" : "opacity-30 grayscale"}`}>⭐</span>
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-4 mb-8">
@@ -196,7 +245,7 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 uppercase tracking-widest">
                   <Activity size={12} />
                   Análise Técnica Expandida
                 </div>
@@ -229,14 +278,72 @@ export default function Home() {
                 historicalData={historicalData}
                 loading={historicalLoading}
               />
+              <TimeMachine
+                data={historicalData}
+                currentPrice={data.price}
+                symbol={data.symbol}
+              />
             </div>
           </div>
-        )}
+        ) : !loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
+            {/* Favorites Widget */}
+            <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="flex items-center gap-2 text-zinc-400 uppercase tracking-widest text-[10px] font-black">
+                  <span className="text-lg">⭐</span> Favoritos
+                </h3>
+                <Link href="/favoritos" className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                  Simular Carteira <ArrowUpRight size={10} />
+                </Link>
+              </div>
+              {favorites && favorites.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {favorites.map(fav => (
+                    <button
+                      key={fav.symbol}
+                      onClick={() => handleSearch(fav.symbol)}
+                      className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all group group/fav"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-black text-lg">{fav.symbol}</span>
+                        <span className="text-xs text-zinc-500 font-bold max-w-[150px] truncate text-left">{fav.name}</span>
+                      </div>
+                      <div
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(fav.symbol, fav.name); }}
+                        className="opacity-0 group-hover/fav:opacity-100 p-2 hover:text-red-500 transition-all"
+                      >
+                        ✖
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-400 font-medium text-sm text-center py-8">Você ainda não tem favoritos.</p>
+              )}
+            </div>
 
-        {!data && !error && (
-          <div className="flex flex-col items-center justify-center py-32 opacity-20 filter grayscale">
-            <Image src="/next.svg" alt="B3" width={200} height={40} className="dark:invert" />
-            <p className="mt-8 font-black uppercase tracking-[0.3em] text-sm">Aguardando Análise</p>
+            {/* Recent Searches Widget */}
+            <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col gap-4">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-400 uppercase tracking-widest text-xs">
+                <span className="text-xl">🕒</span> Recentes
+              </h3>
+              {recentSearches && recentSearches.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {recentSearches.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSearch(item.symbol)}
+                      className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-bold cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      {item.symbol}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-400 font-medium text-sm text-center py-8">Nenhuma busca recente.</p>
+              )}
+            </div>
           </div>
         )}
       </main>
