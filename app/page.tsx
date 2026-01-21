@@ -9,6 +9,7 @@ import StatisticsGrid from "@/components/StatisticsGrid";
 import DividendChart from "@/components/DividendChart";
 import AnalysisSection from "@/components/AnalysisSection";
 import TimeMachine from "@/components/TimeMachine";
+import NewsCard from "@/components/NewsCard";
 import { useUserActions } from "@/hooks/useUserActions";
 
 interface StockData {
@@ -226,6 +227,7 @@ export default function Home() {
               </div>
 
               <StatisticsGrid data={data} />
+              <NewsCard symbol={data.symbol} />
             </div>
 
             {/* Middle Column: Charts */}
