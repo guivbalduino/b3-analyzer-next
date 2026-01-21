@@ -10,6 +10,7 @@ import DividendChart from "@/components/DividendChart";
 import AnalysisSection from "@/components/AnalysisSection";
 import TimeMachine from "@/components/TimeMachine";
 import NewsCard from "@/components/NewsCard";
+import AIAnalysisCard from "@/components/AIAnalysisCard";
 import { useUserActions } from "@/hooks/useUserActions";
 
 interface StockData {
@@ -265,12 +266,9 @@ export default function Home() {
                   <p className="text-xs font-black uppercase tracking-widest opacity-60 mb-1">Dica Profissional</p>
                   <p className="font-bold">Analise as médias móveis, dividendos e Market Cap para decisões de longo prazo.</p>
                 </div>
-                <div className="hidden md:block">
-                  <div className="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center font-black">
-                    {data.changePercent > 0 ? "↗" : "↘"}
-                  </div>
-                </div>
               </div>
+
+              <AIAnalysisCard symbol={data.symbol} />
             </div>
 
             {/* Right Column: Analysis */}

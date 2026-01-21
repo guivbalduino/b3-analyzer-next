@@ -70,6 +70,9 @@ export async function getHistoricalData(symbol: string, period: string = '1Y') {
     case '1Y':
       from = subYears(now, 1);
       break;
+    case '2Y':
+      from = subYears(now, 2);
+      break;
     case '5Y':
       from = subYears(now, 5);
       break;
