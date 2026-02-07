@@ -1,48 +1,67 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCerebrasModels, generateCerebrasAnalysis } from "./cerebras-service";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+interface AIModel {
+    id: string;
+    name: string;
+    provider: string;
+}
+
 export async function listAvailableModels() {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return [];
+    const cerebrasKey = process.env.CEREBRAS_API_KEY;
 
-    try {
-        // Fetch real available models from Google AI API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const data = await response.json();
+    let geminiModels: AIModel[] = [];
+    let cerebrasModels: AIModel[] = [];
 
-        if (!data.models) return [
-            { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: "Google" },
-            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google" },
-            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google" },
-        ];
+    // 1. Fetch Gemini Models
+    if (apiKey) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const data = await response.json();
 
-        return data.models
-            .filter((m: any) =>
-                m.supportedGenerationMethods.includes('generateContent') &&
-                m.name.includes('gemini') &&
-                !m.name.includes('vision') &&
-                !m.name.includes('audio') &&
-                !m.name.includes('tts') &&
-                !m.name.includes('imaging') &&
-                !m.name.includes('experimental') &&
-                !m.name.includes('nano') &&
-                !m.name.includes('preview')
-            )
-            .map((m: any) => ({
-                id: m.name.replace('models/', ''),
-                name: m.displayName,
-                provider: "Google"
-            }))
-            .sort((a: any, b: any) => a.name.localeCompare(b.name));
-    } catch (error) {
-        console.error("Error listing models:", error);
-        return [
-            { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: "Google" },
-            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google" },
-            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google" },
-        ];
+            if (data.models) {
+                geminiModels = data.models
+                    .filter((m: any) =>
+                        m.supportedGenerationMethods.includes('generateContent') &&
+                        m.name.includes('gemini') &&
+                        !m.name.includes('vision') &&
+                        !m.name.includes('audio') &&
+                        !m.name.includes('tts') &&
+                        !m.name.includes('imaging') &&
+                        !m.name.includes('experimental') &&
+                        !m.name.includes('nano') &&
+                        !m.name.includes('preview')
+                    )
+                    .map((m: any) => ({
+                        id: m.name.replace('models/', ''),
+                        name: m.displayName,
+                        provider: "Google"
+                    }))
+                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+            }
+        } catch (error) {
+            console.error("Error listing Gemini models:", error);
+            geminiModels = [
+                { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: "Google" },
+                { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google" },
+            ];
+        }
     }
+
+    // 2. Fetch Cerebras Models
+    if (cerebrasKey) {
+        try {
+            cerebrasModels = await getCerebrasModels();
+        } catch (error) {
+            console.error("Error listing Cerebras models:", error);
+        }
+    }
+
+    // Combine and return
+    return [...geminiModels, ...cerebrasModels];
 }
 
 export async function generateStockAnalysis(
@@ -53,12 +72,6 @@ export async function generateStockAnalysis(
     modelName: string = "gemini-2.5-flash-lite",
     analysisType: string = "completa"
 ) {
-    if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY não configurada no servidor.");
-    }
-
-    const model = genAI.getGenerativeModel({ model: modelName });
-
     // Format data into XML for better LLM parsing
     const historicalXml = historicalData.map(d => `
     <record>
@@ -160,7 +173,19 @@ Foque em:
 5. Não adicione intros vazias. Comece direto no título.
 `;
 
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    return response.text();
+    // ROUTE REQUEST based on modelName
+    if (modelName.startsWith("gemini-")) {
+        // Google Gemini Direct
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY não configurada no servidor.");
+        }
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(finalPrompt);
+        const response = await result.response;
+        return response.text();
+    } else {
+        // Assume Cerebras (or others)
+        // Since we only have Gemini and Cerebras now, if it's not gemini, it's Cerebras
+        return await generateCerebrasAnalysis(modelName, finalPrompt);
+    }
 }

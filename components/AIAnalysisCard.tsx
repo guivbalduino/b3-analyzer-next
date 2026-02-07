@@ -16,12 +16,34 @@ const ANALYSIS_TYPES = [
     { id: "sentimento", name: "Sentimento", icon: "📰", color: "text-cyan-500", bg: "bg-cyan-500/10" },
 ];
 
+interface Model {
+    id: string;
+    name: string;
+    provider: string;
+}
+
 export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
     const [loading, setLoading] = useState(false);
     const [analysis, setAnalysis] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [analysisType, setAnalysisType] = useState("completa");
 
+    // Model Selection State
+    const [models, setModels] = useState<Model[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string>("gemini-2.5-flash-lite");
+    const [showModelMenu, setShowModelMenu] = useState(false);
+
+    useEffect(() => {
+        // Fetch available models
+        fetch('/api/stock/analysis/models')
+            .then(res => res.json())
+            .then((data: Model[]) => {
+                if (data && data.length > 0) {
+                    setModels(data);
+                }
+            })
+            .catch(err => console.error("Failed to load models", err));
+    }, []);
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -33,7 +55,7 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'gemini-2.5-flash-lite',
+                    model: selectedModel,
                     analysisType: analysisType
                 })
             });
@@ -52,6 +74,8 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
         }
     };
 
+    const currentModelName = models.find(m => m.id === selectedModel)?.name || "Gemini 2.5 Flash Lite";
+
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-500">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
@@ -60,9 +84,49 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
                         <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                             <Sparkles size={24} />
                         </div>
-                        <div>
+                        <div className="relative">
                             <h3 className="text-xl font-black tracking-tight text-zinc-900 dark:text-white uppercase">Análise Inteligente</h3>
-                            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Powered by Gemini 2.5 Flash Lite</p>
+                            <button
+                                onClick={() => setShowModelMenu(!showModelMenu)}
+                                className="group flex items-center gap-1.5 focus:outline-none"
+                            >
+                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:text-indigo-600 transition-colors">
+                                    Powered by {currentModelName}
+                                </span>
+                                <ChevronDown size={12} className={`text-indigo-500 transition-transform ${showModelMenu ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Dropdown de Modelos */}
+                            {showModelMenu && (
+                                <div className="absolute mt-2 w-72 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl shadow-xl z-50 overflow-hidden left-0">
+                                    <div className="p-2 max-h-80 overflow-y-auto">
+                                        <div className="px-3 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                            Selecione o Modelo
+                                        </div>
+                                        {models.map((model) => (
+                                            <button
+                                                key={model.id}
+                                                onClick={() => {
+                                                    setSelectedModel(model.id);
+                                                    setShowModelMenu(false);
+                                                }}
+                                                className={`
+                                                    w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors
+                                                    ${selectedModel === model.id
+                                                        ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 text-zinc-600 dark:text-zinc-300'}
+                                                `}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{model.name}</span>
+                                                    <span className="text-[10px] text-zinc-400 font-medium">{model.provider}</span>
+                                                </div>
+                                                {selectedModel === model.id && <Check size={14} />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
