@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCerebrasModels, generateCerebrasAnalysis } from "./cerebras-service";
+import { getGroqModels, generateGroqAnalysis } from "./groq-service";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -12,9 +13,11 @@ interface AIModel {
 export async function listAvailableModels() {
     const apiKey = process.env.GEMINI_API_KEY;
     const cerebrasKey = process.env.CEREBRAS_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
 
     let geminiModels: AIModel[] = [];
     let cerebrasModels: AIModel[] = [];
+    let groqModels: AIModel[] = [];
 
     // 1. Fetch Gemini Models
     if (apiKey) {
@@ -60,8 +63,17 @@ export async function listAvailableModels() {
         }
     }
 
+    // 3. Fetch Groq Models
+    if (groqKey) {
+        try {
+            groqModels = await getGroqModels();
+        } catch (error) {
+            console.error("Error listing Groq models:", error);
+        }
+    }
+
     // Combine and return
-    return [...geminiModels, ...cerebrasModels];
+    return [...geminiModels, ...cerebrasModels, ...groqModels];
 }
 
 export async function generateStockAnalysis(
@@ -183,9 +195,26 @@ Foque em:
         const result = await model.generateContent(finalPrompt);
         const response = await result.response;
         return response.text();
+    } else if (modelName.includes("llama") || modelName.includes("mixtral") || modelName.includes("gemma")) {
+        // Determine if it's Groq or Cerebras
+        // Usually Groq models in our fetch have specific IDs. 
+        // Let's check for CEREBRAS specifically if it's 'gpt-oss' or if it matches cerebras list.
+        // For simplicity, we can look at the provider from the listAvailableModels but here we only have the modelName.
+
+        // Strategy: Try Groq for llama/mixtral if key is present, fallback to Cerebras if appropriate or specific IDs.
+        if (modelName === "gpt-oss-120b" || modelName.startsWith("zai-") || modelName.includes("qwen")) {
+            return await generateCerebrasAnalysis(modelName, finalPrompt);
+        }
+
+        // Preferred fast provider for Llama/Mixtral: Groq
+        if (process.env.GROQ_API_KEY) {
+            return await generateGroqAnalysis(modelName, finalPrompt);
+        }
+
+        // Fallback to Cerebras if Groq key missing
+        return await generateCerebrasAnalysis(modelName, finalPrompt);
     } else {
-        // Assume Cerebras (or others)
-        // Since we only have Gemini and Cerebras now, if it's not gemini, it's Cerebras
+        // Fallback or explicit Cerebras
         return await generateCerebrasAnalysis(modelName, finalPrompt);
     }
 }

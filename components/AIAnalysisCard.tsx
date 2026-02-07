@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Sparkles, Brain, Loader2, AlertCircle, ChevronDown, Check } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+import { useAiSettings } from "@/hooks/use-ai-settings";
 
 interface AIAnalysisCardProps {
     symbol: string;
@@ -23,14 +27,14 @@ interface Model {
 }
 
 export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
+    const { selectedModel, updateSelectedModel, visibleModels, isInitialized } = useAiSettings();
     const [loading, setLoading] = useState(false);
     const [analysis, setAnalysis] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [analysisType, setAnalysisType] = useState("completa");
 
     // Model Selection State
-    const [models, setModels] = useState<Model[]>([]);
-    const [selectedModel, setSelectedModel] = useState<string>("gemini-2.5-flash-lite");
+    const [allModels, setAllModels] = useState<Model[]>([]);
     const [showModelMenu, setShowModelMenu] = useState(false);
 
     useEffect(() => {
@@ -39,11 +43,21 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
             .then(res => res.json())
             .then((data: Model[]) => {
                 if (data && data.length > 0) {
-                    setModels(data);
+                    setAllModels(data);
                 }
             })
             .catch(err => console.error("Failed to load models", err));
     }, []);
+
+    // Filter models based on visibility settings
+    const availableModels = allModels.filter(m => visibleModels.includes(m.id));
+
+    // Ensure selected model is actually available
+    useEffect(() => {
+        if (isInitialized && availableModels.length > 0 && !visibleModels.includes(selectedModel)) {
+            updateSelectedModel(availableModels[0].id);
+        }
+    }, [isInitialized, visibleModels, selectedModel, availableModels, updateSelectedModel]);
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -74,10 +88,29 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
         }
     };
 
-    const currentModelName = models.find(m => m.id === selectedModel)?.name || "Gemini 2.5 Flash Lite";
+    const currentModelName = allModels.find(m => m.id === selectedModel)?.name || "Gemini 2.5 Flash Lite";
+
+    // Cleanup function for markdown
+    const cleanMarkdown = (text: string) => {
+        if (!text) return "";
+        let cleaned = text.trim();
+        // Remove markdown code block wrappers
+        if (cleaned.startsWith("```markdown")) {
+            cleaned = cleaned.replace(/^```markdown\n?/, "").replace(/\n?```$/, "");
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replace(/^```\n?/, "").replace(/\n?```$/, "");
+        }
+        // Remove common introductory phrases if they exist as a single line
+        cleaned = cleaned.replace(/^Analista Financeiro CNPI:.*?\n/i, "");
+        cleaned = cleaned.replace(/^Aqui está a sua análise.*?:\n/i, "");
+
+        return cleaned;
+    };
+
+    if (!isInitialized) return null;
 
     return (
-        <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-500">
+        <div className="relative bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all duration-500">
             <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
@@ -103,11 +136,11 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
                                         <div className="px-3 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                                             Selecione o Modelo
                                         </div>
-                                        {models.map((model) => (
+                                        {availableModels.map((model) => (
                                             <button
                                                 key={model.id}
                                                 onClick={() => {
-                                                    setSelectedModel(model.id);
+                                                    updateSelectedModel(model.id);
                                                     setShowModelMenu(false);
                                                 }}
                                                 className={`
@@ -124,6 +157,12 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
                                                 {selectedModel === model.id && <Check size={14} />}
                                             </button>
                                         ))}
+                                        {availableModels.length === 0 && (
+                                            <div className="p-4 text-center">
+                                                <p className="text-[10px] font-bold text-zinc-400 uppercase">Nenhum modelo ativo</p>
+                                                <Link href="/config/ai" className="text-[10px] font-black text-indigo-500 uppercase mt-2 block">Configurar Modelos</Link>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -209,23 +248,34 @@ export default function AIAnalysisCard({ symbol }: AIAnalysisCardProps) {
                             </button>
                         </div>
                     ) : analysis ? (
-                        <div className="prose prose-zinc dark:prose-invert max-w-none 
-                            [&>h1]:text-2xl [&>h1]:font-black [&>h1]:mb-6 [&>h1]:tracking-tight [&>h1]:text-zinc-900 [&>h1]:dark:text-white
-                            [&>h2]:text-lg [&>h2]:font-black [&>h2]:mb-4 [&>h2]:mt-8 [&>h2]:uppercase [&>h2]:tracking-widest [&>h2]:text-indigo-500 [&>h2]:flex [&>h2]:items-center [&>h2]:gap-2
-                            [&>p]:text-zinc-600 [&>p]:dark:text-zinc-400 [&>p]:leading-relaxed [&>p]:mb-4 [&>p]:font-medium
-                            [&>ul]:mb-6 [&>ul]:space-y-2 [&>li]:text-zinc-600 [&>li]:dark:text-zinc-400 [&>li]:font-semibold [&>li]:list-disc [&>li]:ml-4
-                            [&>blockquote]:border-l-4 [&>blockquote]:border-indigo-500 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:bg-zinc-50 [&>blockquote]:dark:bg-zinc-800/50 [&>blockquote]:py-2 [&>blockquote]:rounded-r-xl [&>blockquote]:mb-6
-                            [&>strong]:text-zinc-900 [&>strong]:dark:text-white [&>strong]:font-black
-                        ">
-                            <ReactMarkdown>{analysis}</ReactMarkdown>
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                            <div className="prose prose-zinc dark:prose-invert max-w-none 
+                                [&>h1]:text-3xl [&>h1]:font-black [&>h1]:mb-8 [&>h1]:tracking-tighter [&>h1]:text-zinc-900 [&>h1]:dark:text-white
+                                [&>h1]:bg-gradient-to-r [&>h1]:from-zinc-900 [&>h1]:to-zinc-500 [&>h1]:bg-clip-text [&>h1]:text-transparent
+                                [&>h2]:text-lg [&>h2]:font-black [&>h2]:mb-4 [&>h2]:mt-10 [&>h2]:uppercase [&>h2]:tracking-widest [&>h2]:text-indigo-600 [&>h2]:dark:text-indigo-400 [&>h2]:border-l-4 [&>h2]:border-indigo-500 [&>h2]:pl-4
+                                [&>h3]:text-sm [&>h3]:font-black [&>h3]:mt-6 [&>h3]:mb-3 [&>h3]:text-zinc-500 [&>h3]:dark:text-zinc-400 [&>h3]:uppercase [&>h3]:tracking-widest
+                                [&>p]:text-zinc-600 [&>p]:dark:text-zinc-300 [&>p]:leading-relaxed [&>p]:mb-6 [&>p]:text-[15px]
+                                [&>ul]:mb-8 [&>ul]:space-y-3 [&>li]:text-zinc-600 [&>li]:dark:text-zinc-300 [&>li]:font-medium [&>li]:list-disc [&>li]:ml-6
+                                [&>blockquote]:border-l-4 [&>blockquote]:border-zinc-200 [&>blockquote]:dark:border-zinc-800 [&>blockquote]:pl-6 [&>blockquote]:italic [&>blockquote]:bg-zinc-50/50 [&>blockquote]:dark:bg-zinc-800/30 [&>blockquote]:py-4 [&>blockquote]:rounded-r-3xl [&>blockquote]:mb-8 [&>blockquote]:text-zinc-500
+                                [&>strong]:text-zinc-900 [&>strong]:dark:text-white [&>strong]:font-black
+                                [&>table]:w-full [&>table]:border-collapse [&>table]:mb-10 [&>table]:rounded-2xl [&>table]:overflow-hidden [&>table]:border [&>table]:border-zinc-100 [&>table]:dark:border-zinc-800
+                                [&>table_thead]:bg-zinc-50 [&>table_thead]:dark:bg-zinc-800/50
+                                [&>table_th]:p-4 [&>table_th]:text-left [&>table_th]:text-[10px] [&>table_th]:font-black [&>table_th]:uppercase [&>table_th]:tracking-widest [&>table_th]:text-zinc-500
+                                [&>table_td]:p-4 [&>table_td]:text-sm [&>table_td]:border-t [&>table_td]:border-zinc-100 [&>table_td]:dark:border-zinc-800 [&>table_td]:text-zinc-600 [&>table_td]:dark:text-zinc-400 [&>table_td]:font-medium
+                                [&>table_tr:nth-child(even)]:bg-zinc-50/30 [&>table_tr:nth-child(even)]:dark:bg-zinc-800/20
+                            ">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {cleanMarkdown(analysis)}
+                                </ReactMarkdown>
 
-                            <div className="mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-800">
-                                <p className="text-[10px] leading-relaxed text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider italic">
-                                    <span className="text-zinc-500 dark:text-zinc-400 font-black not-italic mr-1">Disclaimer:</span>
-                                    Este relatório é baseado exclusivamente nos dados fornecidos e tem caráter analítico e informativo.
-                                    Não constitui recomendação de compra ou venda de ativos.
-                                    Investimentos em renda variável envolvem riscos e podem resultar em perdas de capital.
-                                </p>
+                                <div className="mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                                    <p className="text-[10px] leading-relaxed text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider italic">
+                                        <span className="text-zinc-500 dark:text-zinc-400 font-black not-italic mr-1">Disclaimer:</span>
+                                        Este relatório é baseado exclusivamente nos dados fornecidos e tem caráter analítico e informativo.
+                                        Não constitui recomendação de compra ou venda de ativos.
+                                        Investimentos em renda variável envolvem riscos e podem resultar em perdas de capital.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     ) : null}

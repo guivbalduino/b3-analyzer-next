@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, TrendingUp, Calendar, Info, Activity, Star, ArrowUpRight } from "lucide-react";
+import { Search, TrendingUp, Calendar, Info, Activity, Star, ArrowUpRight, Brain } from "lucide-react";
 import ChartSection from "@/components/ChartSection";
 import StatisticsGrid from "@/components/StatisticsGrid";
 import DividendChart from "@/components/DividendChart";
@@ -157,6 +157,25 @@ export default function Home() {
               <Star size={14} />
               FAVORITOS
             </Link>
+
+            <Link
+              href="/config/ai"
+              className="px-4 py-2 bg-indigo-500 text-white font-bold rounded-xl text-xs hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+              title="Configurações de IA"
+            >
+              <Brain size={14} />
+              IA
+            </Link>
+
+            {data && (
+              <Link
+                href={`/analysis/battle?symbol=${data.symbol}`}
+                className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold rounded-xl text-xs hover:scale-105 transition-all flex items-center gap-2 shadow-lg"
+              >
+                <Activity size={14} />
+                DUELO
+              </Link>
+            )}
           </div>
 
           <form onSubmit={handleSearch} className="flex-1 max-w-md w-full relative">
