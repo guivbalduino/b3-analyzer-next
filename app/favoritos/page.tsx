@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useUserActions } from "@/hooks/useUserActions";
 import { useStockHistory } from "@/hooks/useStockData";
 import { calculateBacktestLogic, calculateCAGR, calculateProjectionValue, calculateProjectionTime } from "@/lib/simulation";
-import { ArrowLeft, Calculator, TrendingUp, Trophy, AlertCircle, Clock, Target, ArrowUpRight, Info, Star, ChevronUp, X, Sparkles } from "lucide-react";
+import { ArrowLeft, Calculator, TrendingUp, Trophy, AlertCircle, Clock, Target, ArrowUpRight, Info, Star, ChevronUp, X, Sparkles, Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,6 +56,33 @@ export default function FavoritesPage() {
                                 <Trophy className="text-yellow-500" size={24} />
                                 Minha Carteira & Simulador
                             </h1>
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-auto">
+                            <Link
+                                href="/favoritos/import"
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-xl text-xs font-bold transition-colors border border-zinc-200 dark:border-zinc-700"
+                            >
+                                <Upload size={14} />
+                                <span className="hidden sm:inline">Importar TXT</span>
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    const content = favorites?.map(f => f.symbol).join("\n");
+                                    const blob = new Blob([content || ""], { type: "text/plain" });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = "favoritos_b3.txt";
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                }}
+                                disabled={!favorites || favorites.length === 0}
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                            >
+                                <Download size={14} />
+                                <span className="hidden sm:inline">Exportar TXT</span>
+                            </button>
                         </div>
                     </div>
 

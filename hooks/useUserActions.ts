@@ -42,6 +42,21 @@ export function useUserActions() {
         }
     }, []);
 
+    const bulkAddFavorites = useCallback(async (symbols: string[]) => {
+        try {
+            const now = new Date();
+            const favoriteStocks = symbols.map(symbol => ({
+                symbol: symbol.toUpperCase().trim(),
+                name: symbol.toUpperCase().trim(), // Using symbol as name initially
+                addedAt: now
+            }));
+
+            await db.favorites.bulkPut(favoriteStocks);
+        } catch (error) {
+            console.error("Error bulk adding favorites:", error);
+        }
+    }, []);
+
     const isFavorite = useCallback((symbol: string) => {
         return favorites?.some(f => f.symbol === symbol) ?? false;
     }, [favorites]);
@@ -51,6 +66,7 @@ export function useUserActions() {
         recentSearches: recentSearches || [],
         addToHistory,
         toggleFavorite,
+        bulkAddFavorites,
         isFavorite
     };
 }
