@@ -48,7 +48,7 @@ export async function listAvailableModels() {
         } catch (error) {
             console.error("Error listing Gemini models:", error);
             geminiModels = [
-                { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: "Google" },
+                { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", provider: "Google" },
                 { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google" },
             ];
         }
@@ -217,4 +217,58 @@ Foque em:
         // Fallback or explicit Cerebras
         return await generateCerebrasAnalysis(modelName, finalPrompt);
     }
+}
+
+export async function generateBatchJointAnalysis(
+    analyses: { symbol: string; content: string }[],
+    modelName: string = "gemini-2.5-flash"
+) {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY não configurada no servidor.");
+    }
+
+    const analysesXml = analyses.map(a => `
+<analysis symbol="${a.symbol}">
+${a.content}
+</analysis>`).join('\n');
+
+    const prompt = `
+Aja como um Estrategista de Investimentos Sênior e Analista Quântico.
+Você recebeu uma série de análises individuais de ativos da B3 (bolsa brasileira). 
+Sua tarefa é consolidar essas informações em um relatório de estratégia de carteira.
+
+Aqui estão as análises individuais:
+${analysesXml}
+
+---
+### TAREFAS:
+1. **Análise Conjunta**: Crie um resumo executivo (Markdown) sobre o conjunto desses ativos. Identifique correlações, riscos do setor e oportunidades de diversificação.
+2. **Ranking e Recomendação**: Gere uma lista JSON rigorosa no final do seu texto, seguindo o esquema abaixo.
+3. **Tom**: Profissional, direto e estratégico.
+
+### ESQUEMA DO RANKING (JSON):
+Atribua para cada ativo:
+- **signal**: ["FORTE COMPRA", "COMPRA", "MANTER", "VENDA", "FORTE VENDA"]
+- **score**: 0 a 100 (onde 100 é a melhor oportunidade custo-benefício/risco no momento)
+
+### FORMATO DE RESPOSTA OBRIGATÓRIO:
+# 💎 Análise Conjunta da Carteira
+[Seu texto de análise estratégica aqui...]
+
+## 📊 Ranking de Ativos
+[Sua tabela Markdown aqui com Símbolo, Recomendação e Score...]
+
+---
+### JSON_DATA_START
+[
+  {"symbol": "ABCD3", "signal": "COMPRA", "score": 85},
+  ...
+]
+### JSON_DATA_END
+`;
+
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
 }

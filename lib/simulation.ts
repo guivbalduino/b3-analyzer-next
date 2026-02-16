@@ -184,3 +184,28 @@ export function calculateProjectionTime(
 
     return Math.log(numerator / denominator) / Math.log(1 + monthlyRate);
 }
+
+export function calculateProjectionIncome(
+    cagr: number,
+    startAmount: number,
+    monthlyContribution: number,
+    months: number
+): number {
+    const fv = calculateProjectionValue(cagr, startAmount, monthlyContribution, months);
+    const monthlyRate = cagr ? Math.pow(1 + cagr, 1 / 12) - 1 : 0;
+    return fv * monthlyRate;
+}
+
+export function calculateProjectionTimeForIncome(
+    cagr: number,
+    startAmount: number,
+    monthlyContribution: number,
+    targetIncome: number
+): number {
+    const monthlyRate = cagr ? Math.pow(1 + cagr, 1 / 12) - 1 : 0;
+    if (monthlyRate <= 0) return Infinity; // Cannot reach a monthly income purely from growth if growth is 0 or negative
+
+    // Target Wealth needed to generate targetIncome
+    const targetWealth = targetIncome / monthlyRate;
+    return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetWealth);
+}

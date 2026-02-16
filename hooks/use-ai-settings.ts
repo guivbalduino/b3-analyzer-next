@@ -5,12 +5,12 @@ import { useState, useEffect } from "react";
 const VISIBLE_MODELS_KEY = "b3_analyzer_visible_models";
 const SELECTED_MODEL_KEY = "b3_analyzer_selected_model";
 const DEFAULT_VISIBLE_MODELS = [
-    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
     "gemini-1.5-flash",
     "llama-3.3-70b-specdec",
     "llama-3.3-70b-versatile"
 ];
-const DEFAULT_SELECTED_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_SELECTED_MODEL = "gemini-2.5-flash";
 
 export function useAiSettings() {
     const [visibleModels, setVisibleModels] = useState<string[]>(DEFAULT_VISIBLE_MODELS);

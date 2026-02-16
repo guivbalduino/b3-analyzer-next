@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useUserActions } from "@/hooks/useUserActions";
 import { useStockHistory } from "@/hooks/useStockData";
-import { calculateBacktestLogic, calculateCAGR, calculateProjectionValue, calculateProjectionTime } from "@/lib/simulation";
+import { calculateBacktestLogic, calculateCAGR, calculateProjectionValue, calculateProjectionTime, calculateProjectionIncome, calculateProjectionTimeForIncome } from "@/lib/simulation";
+import BatchAnalysis from "@/components/BatchAnalysis";
 import { ArrowLeft, Calculator, TrendingUp, Trophy, AlertCircle, Clock, Target, ArrowUpRight, Info, Star, ChevronUp, X, Sparkles, Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -37,10 +38,10 @@ export default function FavoritesPage() {
     const [period, setPeriod] = useState("1Y");
 
     // Projection Params
-    const [projMode, setProjMode] = useState<"value" | "goal">("value");
+    const [projMode, setProjMode] = useState<"value" | "goal" | "income_value" | "income_goal">("value");
     const [monthlyContribution, setMonthlyContribution] = useState(500);
-    const [months, setMonths] = useState(12); // For "value" mode
-    const [targetAmount, setTargetAmount] = useState(100000); // For "goal" mode
+    const [months, setMonths] = useState(12); // For "value" modes
+    const [targetAmount, setTargetAmount] = useState(100000); // For "goal" modes
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pb-32">
@@ -153,13 +154,38 @@ export default function FavoritesPage() {
                                         />
                                     </div>
                                     <div className="md:col-span-2 flex items-end gap-2">
-                                        <button
-                                            onClick={() => setProjMode(projMode === "value" ? "goal" : "value")}
-                                            className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors mb-1"
-                                        >
-                                            {projMode === "value" ? "Modo: Patrimônio" : "Modo: Meta"}
-                                        </button>
-                                        {projMode === "value" ? (
+                                        <div className="flex flex-col gap-1 flex-1">
+                                            <div className="flex bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-lg mb-1">
+                                                <button
+                                                    onClick={() => setProjMode(prev => prev.includes('income') ? 'income_value' : 'value')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${!projMode.includes('goal') ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                >
+                                                    Valor Final
+                                                </button>
+                                                <button
+                                                    onClick={() => setProjMode(prev => prev.includes('income') ? 'income_goal' : 'goal')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projMode.includes('goal') ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                >
+                                                    Quanto Tempo
+                                                </button>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setProjMode(prev => {
+                                                        if (prev === "value") return "income_value";
+                                                        if (prev === "income_value") return "value";
+                                                        if (prev === "goal") return "income_goal";
+                                                        if (prev === "income_goal") return "goal";
+                                                        return "value";
+                                                    });
+                                                }}
+                                                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                                            >
+                                                {projMode.includes("income") ? "Foco: Renda Mensal" : "Foco: Patrimônio"}
+                                            </button>
+                                        </div>
+
+                                        {projMode.includes("value") ? (
                                             <div className="flex-1">
                                                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Meses</label>
                                                 <input
@@ -171,7 +197,9 @@ export default function FavoritesPage() {
                                             </div>
                                         ) : (
                                             <div className="flex-1">
-                                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Meta (R$)</label>
+                                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
+                                                    {projMode === "income_goal" ? "Renda Alvo (R$/mês)" : "Meta (R$)"}
+                                                </label>
                                                 <input
                                                     type="number"
                                                     value={targetAmount}
@@ -188,31 +216,55 @@ export default function FavoritesPage() {
                 </div>
             </div>
 
-            {/* Content List */}
-            <div className="max-w-5xl mx-auto px-6 py-8">
-                {!favorites || favorites.length === 0 ? (
-                    <div className="text-center py-20">
-                        <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400">
-                            <AlertCircle />
-                        </div>
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Nenhum favorito ainda</h3>
-                        <p className="text-zinc-500 text-sm mt-2">Adicione ações aos favoritos na tela inicial para comparar aqui.</p>
-                        <Link href="/" className="inline-block mt-6 px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors">
-                            Explorar Ações
-                        </Link>
+            {/* Main Content Layout - Two Columns */}
+            <div className="max-w-[1600px] mx-auto px-6 py-8">
+                <div className="flex flex-col lg:flex-row gap-8 items-start">
+
+                    {/* Left Column: Individual Asset Simulations */}
+                    <div className="flex-1 w-full order-2 lg:order-1">
+                        {!favorites || favorites.length === 0 ? (
+                            <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-[3rem] border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                                <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400">
+                                    <AlertCircle />
+                                </div>
+                                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Nenhum favorito ainda</h3>
+                                <p className="text-zinc-500 text-sm mt-2">Adicione ações aos favoritos na tela inicial para comparar aqui.</p>
+                                <Link href="/" className="inline-block mt-6 px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors">
+                                    Explorar Ações
+                                </Link>
+                            </div>
+                        ) : (
+                            <FavoritesGrid
+                                favorites={favorites}
+                                simType={simType}
+                                amount={amount}
+                                period={period}
+                                projMode={projMode}
+                                monthlyContribution={monthlyContribution}
+                                months={months}
+                                targetAmount={targetAmount}
+                            />
+                        )}
                     </div>
-                ) : (
-                    <FavoritesGrid
-                        favorites={favorites}
-                        simType={simType}
-                        amount={amount}
-                        period={period}
-                        projMode={projMode}
-                        monthlyContribution={monthlyContribution}
-                        months={months}
-                        targetAmount={targetAmount}
-                    />
-                )}
+
+                    {/* Right Column: AI Batch Analysis Sidebar */}
+                    {favorites && favorites.length > 0 && (
+                        <div className="w-full lg:w-[480px] shrink-0 order-1 lg:order-2 sticky top-[120px]">
+                            <BatchAnalysis favorites={favorites} />
+
+                            <div className="mt-6 p-6 bg-zinc-100/50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3 ml-1 flex items-center gap-2">
+                                    <Info size={12} />
+                                    Dica do Especialista
+                                </h4>
+                                <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400 font-medium">
+                                    O Estrategista IA analisa os fundamentos e sentimentos de cada ativo sequencialmente.
+                                    Aguarde o processamento completo para gerar o <strong>Ranking Tático</strong> da carteira.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -267,7 +319,7 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
         let maxVal = -Infinity;
         let winner: string | null = null;
         Object.entries(results).forEach(([sym, val]) => {
-            const isTimeMode = simType === "projection" && projMode === "goal";
+            const isTimeMode = simType === "projection" && (projMode === "goal" || projMode === "income_goal");
             if (isTimeMode) {
                 if (val > 0 && (winner === null || val < maxVal)) {
                     maxVal = val;
@@ -288,7 +340,7 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
             const valA = results[a.symbol] || 0;
             const valB = results[b.symbol] || 0;
 
-            const isTimeMode = simType === "projection" && projMode === "goal";
+            const isTimeMode = simType === "projection" && (projMode === "goal" || projMode === "income_goal");
             if (isTimeMode) {
                 if (valA === 0) return 1;
                 if (valB === 0) return -1;
@@ -489,6 +541,10 @@ function FavoriteCard({ symbol, name, simType, amount, period, projMode, monthly
             if (cagr !== null) {
                 if (projMode === "value") {
                     resValue = calculateProjectionValue(cagr, amount, monthlyContribution, months);
+                } else if (projMode === "income_value") {
+                    resValue = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
+                } else if (projMode === "income_goal") {
+                    resValue = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetAmount);
                 } else {
                     resValue = calculateProjectionTime(cagr, amount, monthlyContribution, targetAmount);
                 }
@@ -533,6 +589,37 @@ function FavoriteCard({ symbol, name, simType, amount, period, projMode, monthly
                         <div className="text-[10px] text-zinc-400">
                             Investido: R$ {(amount + (monthlyContribution * months)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                         </div>
+                    </div>
+                );
+            } else if (projMode === "income_value") {
+                const val = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
+                displayContent = (
+                    <div className="space-y-1">
+                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Renda Mensal (Reinvestida)</div>
+                        <div className="text-2xl font-black text-emerald-500 tracking-tighter">
+                            R$ {val.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/mês
+                        </div>
+                        <div className="text-[10px] text-zinc-400">
+                            Ao final de {months} meses
+                        </div>
+                    </div>
+                );
+            } else if (projMode === "income_goal") {
+                const valMonths = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetAmount);
+                const years = valMonths / 12;
+                displayContent = (
+                    <div className="space-y-1">
+                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Tempo para Renda Alvo</div>
+                        {valMonths === Infinity ? (
+                            <div className="text-xl font-black text-red-500 tracking-tighter italic">Inalcançável</div>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-black text-emerald-500 tracking-tighter">
+                                    {years.toFixed(1)} <span className="text-lg text-zinc-400">anos</span>
+                                </div>
+                                <div className="text-[10px] text-zinc-400">~ {Math.ceil(valMonths)} meses</div>
+                            </>
+                        )}
                     </div>
                 );
             } else {

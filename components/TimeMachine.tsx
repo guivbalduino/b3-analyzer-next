@@ -133,22 +133,32 @@ function BacktestView({ data, currentPrice, symbol }: any) {
 
 // --- Projection View (New Logic) ---
 function ProjectionView({ cagr, symbol }: any) {
-    const [mode, setMode] = useState<"value" | "goal">("value");
+    const [mode, setMode] = useState<"value" | "goal" | "income_value" | "income_goal">("value");
     const [startAmount, setStartAmount] = useState(1000);
     const [monthlyContribution, setMonthlyContribution] = useState(500);
     const [months, setMonths] = useState(12);
     const [targetAmount, setTargetAmount] = useState(100000);
 
     // Result Calculations
+    const monthlyRate = cagr ? Math.pow(1 + cagr, 1 / 12) - 1 : 0;
+
     const projectedValue = useMemo(() => {
         if (cagr === null) return 0;
         return calculateProjectionValue(cagr, startAmount, monthlyContribution, months);
     }, [cagr, startAmount, monthlyContribution, months]);
 
+    const projectedIncome = useMemo(() => {
+        return projectedValue * monthlyRate;
+    }, [projectedValue, monthlyRate]);
+
     const projectedMonthsToGoal = useMemo(() => {
         if (cagr === null) return 0;
+        if (mode === "income_goal") {
+            const targetWealth = targetAmount / monthlyRate;
+            return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetWealth);
+        }
         return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetAmount);
-    }, [cagr, startAmount, monthlyContribution, targetAmount]);
+    }, [cagr, startAmount, monthlyContribution, targetAmount, mode, monthlyRate]);
 
     const projectedYears = projectedMonthsToGoal / 12;
 
@@ -166,14 +176,36 @@ function ProjectionView({ cagr, symbol }: any) {
                 </div>
             </div>
 
-            {/* Toggle Mode */}
-            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-                <button onClick={() => setMode("value")} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${mode === "value" ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-400"}`}>
-                    Quanto vou ter?
-                </button>
-                <button onClick={() => setMode("goal")} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${mode === "goal" ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-400"}`}>
-                    Quanto tempo leva?
-                </button>
+            {/* Matrix Toggle Mode */}
+            <div className="flex flex-col gap-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-2xl">
+                <div className="flex p-1 bg-white/50 dark:bg-black/20 rounded-xl">
+                    <button
+                        onClick={() => setMode(prev => prev.includes('income') ? 'income_value' : 'value')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${!mode.includes('goal') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                    >
+                        Quanto vou ter?
+                    </button>
+                    <button
+                        onClick={() => setMode(prev => prev.includes('income') ? 'income_goal' : 'goal')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode.includes('goal') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                    >
+                        Quanto tempo leva?
+                    </button>
+                </div>
+                <div className="flex p-1 bg-white/50 dark:bg-black/20 rounded-xl">
+                    <button
+                        onClick={() => setMode(prev => prev.includes('goal') ? 'goal' : 'value')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${!mode.includes('income') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                    >
+                        Patrimônio
+                    </button>
+                    <button
+                        onClick={() => setMode(prev => prev.includes('goal') ? 'income_goal' : 'income_value')}
+                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode.includes('income') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                    >
+                        Renda Mensal
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -186,14 +218,16 @@ function ProjectionView({ cagr, symbol }: any) {
                     <input type="number" value={monthlyContribution} onChange={(e) => setMonthlyContribution(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
                 </div>
 
-                {mode === "value" ? (
+                {mode.includes("value") ? (
                     <div className="col-span-2 flex flex-col gap-2">
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Esperar por (Meses)</label>
                         <input type="number" value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
                     </div>
                 ) : (
                     <div className="col-span-2 flex flex-col gap-2">
-                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Meta (R$)</label>
+                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                            {mode === "income_goal" ? "Renda Alvo (R$/mês)" : "Meta (R$)"}
+                        </label>
                         <input type="number" value={targetAmount} onChange={(e) => setTargetAmount(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
                     </div>
                 )}
@@ -213,17 +247,29 @@ function ProjectionView({ cagr, symbol }: any) {
                             *Inv. total: R$ {(startAmount + (monthlyContribution * months)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                         </div>
                     </>
+                ) : mode === "income_value" ? (
+                    <>
+                        <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Renda Mensal Estimada</p>
+                        <div className="text-3xl font-black tracking-tighter relative z-10">
+                            R$ {projectedIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês
+                        </div>
+                        <div className="text-emerald-100 text-[10px] font-medium mt-2 relative z-10 opacity-80">
+                            *Considerando rentabilidade composta reinvestida.
+                        </div>
+                    </>
                 ) : (
                     <>
                         <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Tempo estimado</p>
                         <div className="text-3xl font-black tracking-tighter relative z-10 flex items-baseline gap-2">
-                            {projectedYears.toFixed(1)} <span className="text-lg">anos</span>
+                            {projectedYears === Infinity ? "Inalcançável" : projectedYears.toFixed(1)} <span className="text-lg">{projectedYears === Infinity ? "" : "anos"}</span>
                         </div>
-                        <div className="text-emerald-100 text-sm font-medium relative z-10">
-                            ({Math.ceil(projectedMonthsToGoal)} meses)
-                        </div>
+                        {projectedYears !== Infinity && (
+                            <div className="text-emerald-100 text-sm font-medium relative z-10">
+                                ({Math.ceil(projectedMonthsToGoal)} meses)
+                            </div>
+                        )}
                         <div className="text-emerald-100 text-[10px] font-medium mt-2 relative z-10 opacity-80">
-                            *Considerando rentabilidade constante.
+                            *Considerando reinvestimento automático.
                         </div>
                     </>
                 )}
