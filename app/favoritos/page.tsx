@@ -38,10 +38,12 @@ export default function FavoritesPage() {
     const [period, setPeriod] = useState("1Y");
 
     // Projection Params
-    const [projMode, setProjMode] = useState<"value" | "goal" | "income_value" | "income_goal">("value");
+    const [projMode, setProjMode] = useState<"value" | "goal">("value");
+    const [projFocus, setProjFocus] = useState<"patrimonio" | "renda">("patrimonio");
     const [monthlyContribution, setMonthlyContribution] = useState(500);
     const [months, setMonths] = useState(12); // For "value" modes
-    const [targetAmount, setTargetAmount] = useState(100000); // For "goal" modes
+    const [targetAmount, setTargetAmount] = useState(100000); // For "goal" (Wealth)
+    const [targetIncome, setTargetIncome] = useState(2000); // For "goal" (Income)
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black pb-32">
@@ -157,35 +159,35 @@ export default function FavoritesPage() {
                                         <div className="flex flex-col gap-1 flex-1">
                                             <div className="flex bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-lg mb-1">
                                                 <button
-                                                    onClick={() => setProjMode(prev => prev.includes('income') ? 'income_value' : 'value')}
-                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${!projMode.includes('goal') ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                    onClick={() => setProjMode('value')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projMode === 'value' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
                                                 >
                                                     Valor Final
                                                 </button>
                                                 <button
-                                                    onClick={() => setProjMode(prev => prev.includes('income') ? 'income_goal' : 'goal')}
-                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projMode.includes('goal') ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                    onClick={() => setProjMode('goal')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projMode === 'goal' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
                                                 >
                                                     Quanto Tempo
                                                 </button>
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    setProjMode(prev => {
-                                                        if (prev === "value") return "income_value";
-                                                        if (prev === "income_value") return "value";
-                                                        if (prev === "goal") return "income_goal";
-                                                        if (prev === "income_goal") return "goal";
-                                                        return "value";
-                                                    });
-                                                }}
-                                                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                                            >
-                                                {projMode.includes("income") ? "Foco: Renda Mensal" : "Foco: Patrimônio"}
-                                            </button>
+                                            <div className="flex bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-lg">
+                                                <button
+                                                    onClick={() => setProjFocus('patrimonio')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projFocus === 'patrimonio' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                >
+                                                    Patrimônio
+                                                </button>
+                                                <button
+                                                    onClick={() => setProjFocus('renda')}
+                                                    className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${projFocus === 'renda' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}
+                                                >
+                                                    Renda Mensal
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        {projMode.includes("value") ? (
+                                        {projMode === "value" ? (
                                             <div className="flex-1">
                                                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Meses</label>
                                                 <input
@@ -196,17 +198,26 @@ export default function FavoritesPage() {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="flex-1">
-                                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
-                                                    {projMode === "income_goal" ? "Renda Alvo (R$/mês)" : "Meta (R$)"}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={targetAmount}
-                                                    onChange={e => setTargetAmount(Number(e.target.value))}
-                                                    className="w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 px-2 py-1 font-bold outline-none transition-colors"
-                                                />
-                                            </div>
+                                            <>
+                                                <div className="flex-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Meta Patr. (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={targetAmount}
+                                                        onChange={e => setTargetAmount(Number(e.target.value))}
+                                                        className="w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 px-2 py-1 font-bold outline-none transition-colors"
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">Meta Renda (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={targetIncome}
+                                                        onChange={e => setTargetIncome(Number(e.target.value))}
+                                                        className="w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 px-2 py-1 font-bold outline-none transition-colors"
+                                                    />
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 </>
@@ -240,9 +251,11 @@ export default function FavoritesPage() {
                                 amount={amount}
                                 period={period}
                                 projMode={projMode}
+                                projFocus={projFocus}
                                 monthlyContribution={monthlyContribution}
                                 months={months}
                                 targetAmount={targetAmount}
+                                targetIncome={targetIncome}
                             />
                         )}
                     </div>
@@ -270,7 +283,7 @@ export default function FavoritesPage() {
     );
 }
 
-function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyContribution, months, targetAmount }: any) {
+function FavoritesGrid({ favorites, simType, amount, period, projMode, projFocus, monthlyContribution, months, targetAmount, targetIncome }: any) {
     // We need to fetch data for all favorites to sort them. 
     // This component will manage the list and sorting.
 
@@ -319,7 +332,7 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
         let maxVal = -Infinity;
         let winner: string | null = null;
         Object.entries(results).forEach(([sym, val]) => {
-            const isTimeMode = simType === "projection" && (projMode === "goal" || projMode === "income_goal");
+            const isTimeMode = simType === "projection" && projMode === "goal";
             if (isTimeMode) {
                 if (val > 0 && (winner === null || val < maxVal)) {
                     maxVal = val;
@@ -340,7 +353,7 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
             const valA = results[a.symbol] || 0;
             const valB = results[b.symbol] || 0;
 
-            const isTimeMode = simType === "projection" && (projMode === "goal" || projMode === "income_goal");
+            const isTimeMode = simType === "projection" && projMode === "goal";
             if (isTimeMode) {
                 if (valA === 0) return 1;
                 if (valB === 0) return -1;
@@ -396,9 +409,11 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
                         amount={amount}
                         period={period}
                         projMode={projMode}
+                        projFocus={projFocus}
                         monthlyContribution={monthlyContribution}
                         months={months}
                         targetAmount={targetAmount}
+                        targetIncome={targetIncome}
                         onResult={handleResult}
                         isWinner={winnerSymbol === fav.symbol}
                         rank={index + 1}
@@ -494,7 +509,7 @@ function FavoritesGrid({ favorites, simType, amount, period, projMode, monthlyCo
     );
 }
 
-function FavoriteCard({ symbol, name, simType, amount, period, projMode, monthlyContribution, months, targetAmount, onResult, isWinner, rank }: any) {
+function FavoriteCard({ symbol, name, simType, amount, period, projMode, projFocus, monthlyContribution, months, targetAmount, targetIncome, onResult, isWinner, rank }: any) {
     const { history, isLoading } = useStockHistory(symbol);
     // Calculate current price immediately when history loads
     const currentPrice = useMemo(() => {
@@ -540,19 +555,23 @@ function FavoriteCard({ symbol, name, simType, amount, period, projMode, monthly
             const cagr = calculateCAGR(history);
             if (cagr !== null) {
                 if (projMode === "value") {
-                    resValue = calculateProjectionValue(cagr, amount, monthlyContribution, months);
-                } else if (projMode === "income_value") {
-                    resValue = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
-                } else if (projMode === "income_goal") {
-                    resValue = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetAmount);
+                    if (projFocus === "patrimonio") {
+                        resValue = calculateProjectionValue(cagr, amount, monthlyContribution, months);
+                    } else {
+                        resValue = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
+                    }
                 } else {
-                    resValue = calculateProjectionTime(cagr, amount, monthlyContribution, targetAmount);
+                    if (projFocus === "patrimonio") {
+                        resValue = calculateProjectionTime(cagr, amount, monthlyContribution, targetAmount);
+                    } else {
+                        resValue = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetIncome);
+                    }
                 }
             }
         }
 
         onResult(symbol, resValue, multiResults);
-    }, [history, simResult, simType, amount, projMode, monthlyContribution, months, targetAmount, symbol, onResult, currentPrice]);
+    }, [history, simResult, simType, amount, projMode, monthlyContribution, months, targetAmount, targetIncome, symbol, onResult, currentPrice]);
 
     if (isLoading) return <div className="h-48 rounded-[2rem] bg-zinc-100 dark:bg-zinc-900 animate-pulse" />;
 
@@ -579,126 +598,118 @@ function FavoriteCard({ symbol, name, simType, amount, period, projMode, monthly
         } else if (simType === "projection") {
             // Projection
             if (projMode === "value") {
-                const val = calculateProjectionValue(cagr, amount, monthlyContribution, months);
-                displayContent = (
-                    <div className="space-y-1">
-                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Patrimônio Projetado</div>
-                        <div className="text-2xl font-black text-emerald-500 tracking-tighter">
-                            R$ {val.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                if (projFocus === "patrimonio") {
+                    const wealth = calculateProjectionValue(cagr, amount, monthlyContribution, months);
+                    displayContent = (
+                        <div className="space-y-1">
+                            <div className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Patrimônio Projetado</div>
+                            <div className="text-2xl font-black text-emerald-500 tracking-tighter">
+                                R$ {wealth.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                            </div>
+                            <div className="text-[10px] text-zinc-400 font-bold uppercase">Investido: R$ {(amount + (monthlyContribution * months)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</div>
                         </div>
-                        <div className="text-[10px] text-zinc-400">
-                            Investido: R$ {(amount + (monthlyContribution * months)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                    );
+                } else {
+                    const income = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
+                    displayContent = (
+                        <div className="space-y-1">
+                            <div className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Renda Mensal Estimada</div>
+                            <div className="text-2xl font-black text-indigo-500 tracking-tighter">
+                                R$ {income.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/mês
+                            </div>
+                            <div className="text-[10px] text-zinc-400 font-bold uppercase">Após reinvestimento composto</div>
                         </div>
-                    </div>
-                );
-            } else if (projMode === "income_value") {
-                const val = calculateProjectionIncome(cagr, amount, monthlyContribution, months);
-                displayContent = (
-                    <div className="space-y-1">
-                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Renda Mensal (Reinvestida)</div>
-                        <div className="text-2xl font-black text-emerald-500 tracking-tighter">
-                            R$ {val.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/mês
-                        </div>
-                        <div className="text-[10px] text-zinc-400">
-                            Ao final de {months} meses
-                        </div>
-                    </div>
-                );
-            } else if (projMode === "income_goal") {
-                const valMonths = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetAmount);
-                const years = valMonths / 12;
-                displayContent = (
-                    <div className="space-y-1">
-                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Tempo para Renda Alvo</div>
-                        {valMonths === Infinity ? (
-                            <div className="text-xl font-black text-red-500 tracking-tighter italic">Inalcançável</div>
-                        ) : (
-                            <>
-                                <div className="text-2xl font-black text-emerald-500 tracking-tighter">
-                                    {years.toFixed(1)} <span className="text-lg text-zinc-400">anos</span>
-                                </div>
-                                <div className="text-[10px] text-zinc-400">~ {Math.ceil(valMonths)} meses</div>
-                            </>
-                        )}
-                    </div>
-                );
+                    );
+                }
             } else {
-                const valMonths = calculateProjectionTime(cagr, amount, monthlyContribution, targetAmount);
-                const years = valMonths / 12;
-                displayContent = (
-                    <div className="space-y-1">
-                        <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Tempo para Meta</div>
-                        <div className="text-2xl font-black text-emerald-500 tracking-tighter">
-                            {years.toFixed(1)} <span className="text-lg text-zinc-400">anos</span>
+                if (projFocus === "patrimonio") {
+                    const timeWealth = calculateProjectionTime(cagr, amount, monthlyContribution, targetAmount);
+                    displayContent = (
+                        <div className="space-y-1">
+                            <div className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Tempo para Meta</div>
+                            <div className="text-2xl font-black text-emerald-500 tracking-tighter">
+                                {(timeWealth / 12).toFixed(1)} <span className="text-xs uppercase">anos</span>
+                            </div>
+                            <div className="text-[10px] text-zinc-400 font-bold uppercase">~ {Math.ceil(timeWealth)} meses (R$ {targetAmount.toLocaleString("pt-BR")})</div>
                         </div>
-                        <div className="text-[10px] text-zinc-400">
-                            ~ {Math.ceil(valMonths)} meses
+                    );
+                } else {
+                    const timeIncome = calculateProjectionTimeForIncome(cagr, amount, monthlyContribution, targetIncome);
+                    displayContent = (
+                        <div className="space-y-1">
+                            <div className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Tempo para Renda</div>
+                            <div className="text-2xl font-black text-indigo-500 tracking-tighter">
+                                {timeIncome === Infinity ? "∞" : (timeIncome / 12).toFixed(1)} <span className="text-xs uppercase">{timeIncome === Infinity ? "" : "anos"}</span>
+                            </div>
+                            <div className="text-[10px] text-zinc-400 font-bold uppercase">
+                                {timeIncome === Infinity ? "Inalcançável" : `~ ${Math.ceil(timeIncome)} meses (R$ ${targetIncome.toLocaleString("pt-BR")}/mês)`}
+                            </div>
                         </div>
-                    </div>
-                );
+                    );
+                }
             }
         }
-    }
 
-    return (
-        <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border relative transition-all group hover:scale-[1.02] hover:shadow-xl ${isWinner ? "border-yellow-400 ring-4 ring-yellow-400/20 shadow-yellow-500/20" : "border-zinc-100 dark:border-zinc-800"}`}>
-            {/* Rank Badge */}
-            <div className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border-2 z-20 ${rank === 1 ? "bg-yellow-400 border-yellow-500 text-yellow-900" :
-                rank === 2 ? "bg-zinc-300 border-zinc-400 text-zinc-700" :
-                    rank === 3 ? "bg-amber-600 border-amber-700 text-amber-50" :
-                        "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400"
-                }`}>
-                #{rank}
-            </div>
-
-            {isWinner && (
-                <div className="absolute -top-3 -right-3 w-10 h-10 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-xl flex items-center justify-center text-white shadow-lg animate-bounce z-20">
-                    <Trophy size={20} fill="currentColor" />
+        return (
+            <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border relative transition-all group hover:scale-[1.02] hover:shadow-xl ${isWinner ? "border-yellow-400 ring-4 ring-yellow-400/20 shadow-yellow-500/20" : "border-zinc-100 dark:border-zinc-800"}`}>
+                {/* Rank Badge */}
+                <div className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border-2 z-20 ${rank === 1 ? "bg-yellow-400 border-yellow-500 text-yellow-900" :
+                    rank === 2 ? "bg-zinc-300 border-zinc-400 text-zinc-700" :
+                        rank === 3 ? "bg-amber-600 border-amber-700 text-amber-50" :
+                            "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400"
+                    }`}>
+                    #{rank}
                 </div>
-            )}
 
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h3 className="font-black text-lg text-zinc-900 dark:text-white leading-none">{symbol}</h3>
-                    <p className="text-xs text-zinc-400 font-bold mt-1 truncate max-w-[120px]">{name}</p>
-                </div>
-                <div className="text-right">
-                    <div className="text-sm font-black text-zinc-900 dark:text-zinc-300">R$ {currentPrice.toFixed(2)}</div>
-                    <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md inline-block mt-1">
-                        CAGR {(cagr * 100).toFixed(1)}%
-                    </div>
-                </div>
-            </div>
-
-            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                {displayContent ? (
-                    <div className="space-y-4">
-                        {displayContent}
-
-                        {simType === "backtest" && simResult && (
-                            <div className="grid grid-cols-2 gap-2 pt-2">
-                                <div className="p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
-                                    <p className="text-[9px] font-bold text-zinc-400 uppercase mb-0.5">YOC (Dividendo)</p>
-                                    <p className="text-xs font-black text-indigo-500">
-                                        {((simResult.dividendsValue / amount) * 100 / (period === "1M" ? 1 / 12 : period === "6M" ? 0.5 : period === "1Y" ? 1 : 5)).toFixed(1)}% a.a
-                                    </p>
-                                </div>
-                                <div className="p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl text-right">
-                                    <p className="text-[9px] font-bold text-zinc-400 uppercase mb-0.5">Preço Inicial</p>
-                                    <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">R$ {simResult.initialPrice.toFixed(2)}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium py-4">
-                        <AlertCircle size={14} />
-                        Dados insuficientes
+                {isWinner && (
+                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-xl flex items-center justify-center text-white shadow-lg animate-bounce z-20">
+                        <Trophy size={20} fill="currentColor" />
                     </div>
                 )}
-            </div>
 
-            <Link href={`/?symbol=${symbol}`} className="absolute inset-0 z-10" />
-        </div>
-    );
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 className="font-black text-lg text-zinc-900 dark:text-white leading-none">{symbol}</h3>
+                        <p className="text-xs text-zinc-400 font-bold mt-1 truncate max-w-[120px]">{name}</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-sm font-black text-zinc-900 dark:text-zinc-300">R$ {currentPrice.toFixed(2)}</div>
+                        <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md inline-block mt-1">
+                            CAGR {(cagr * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    {displayContent ? (
+                        <div className="space-y-4">
+                            {displayContent}
+
+                            {simType === "backtest" && simResult && (
+                                <div className="grid grid-cols-2 gap-2 pt-2">
+                                    <div className="p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                                        <p className="text-[9px] font-bold text-zinc-400 uppercase mb-0.5">YOC (Dividendo)</p>
+                                        <p className="text-xs font-black text-indigo-500">
+                                            {((simResult.dividendsValue / amount) * 100 / (period === "1M" ? 1 / 12 : period === "6M" ? 0.5 : period === "1Y" ? 1 : 5)).toFixed(1)}% a.a
+                                        </p>
+                                    </div>
+                                    <div className="p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl text-right">
+                                        <p className="text-[9px] font-bold text-zinc-400 uppercase mb-0.5">Preço Inicial</p>
+                                        <p className="text-xs font-black text-zinc-600 dark:text-zinc-400">R$ {simResult.initialPrice.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium py-4">
+                            <AlertCircle size={14} />
+                            Dados insuficientes
+                        </div>
+                    )}
+                </div>
+
+                <Link href={`/?symbol=${symbol}`} className="absolute inset-0 z-10" />
+            </div>
+        );
+    }
 }

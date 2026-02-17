@@ -133,11 +133,13 @@ function BacktestView({ data, currentPrice, symbol }: any) {
 
 // --- Projection View (New Logic) ---
 function ProjectionView({ cagr, symbol }: any) {
-    const [mode, setMode] = useState<"value" | "goal" | "income_value" | "income_goal">("value");
+    const [mode, setMode] = useState<"value" | "goal">("value");
+    const [focus, setFocus] = useState<"patrimonio" | "renda">("patrimonio");
     const [startAmount, setStartAmount] = useState(1000);
     const [monthlyContribution, setMonthlyContribution] = useState(500);
     const [months, setMonths] = useState(12);
     const [targetAmount, setTargetAmount] = useState(100000);
+    const [targetIncome, setTargetIncome] = useState(2000);
 
     // Result Calculations
     const monthlyRate = cagr ? Math.pow(1 + cagr, 1 / 12) - 1 : 0;
@@ -153,14 +155,25 @@ function ProjectionView({ cagr, symbol }: any) {
 
     const projectedMonthsToGoal = useMemo(() => {
         if (cagr === null) return 0;
-        if (mode === "income_goal") {
-            const targetWealth = targetAmount / monthlyRate;
+        if (mode === "goal" && focus === "renda") {
+            const targetWealth = targetIncome / monthlyRate;
             return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetWealth);
         }
         return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetAmount);
-    }, [cagr, startAmount, monthlyContribution, targetAmount, mode, monthlyRate]);
+    }, [cagr, startAmount, monthlyContribution, targetAmount, targetIncome, mode, focus, monthlyRate]);
 
     const projectedYears = projectedMonthsToGoal / 12;
+
+    const projectedTimeWealth = useMemo(() => {
+        if (cagr === null) return 0;
+        return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetAmount);
+    }, [cagr, startAmount, monthlyContribution, targetAmount]);
+
+    const projectedTimeIncome = useMemo(() => {
+        if (cagr === null || monthlyRate <= 0) return Infinity;
+        const targetWealth = targetIncome / monthlyRate;
+        return calculateProjectionTime(cagr, startAmount, monthlyContribution, targetWealth);
+    }, [cagr, startAmount, monthlyContribution, targetIncome, monthlyRate]);
 
     if (cagr === null) return <div className="text-center text-zinc-400 py-10">Histórico insuficiente para projeção.</div>;
 
@@ -176,32 +189,32 @@ function ProjectionView({ cagr, symbol }: any) {
                 </div>
             </div>
 
-            {/* Matrix Toggle Mode */}
+            {/* 2-row layout like Favorites */}
             <div className="flex flex-col gap-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-2xl">
                 <div className="flex p-1 bg-white/50 dark:bg-black/20 rounded-xl">
                     <button
-                        onClick={() => setMode(prev => prev.includes('income') ? 'income_value' : 'value')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${!mode.includes('goal') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                        onClick={() => setMode('value')}
+                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'value' ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
                     >
                         Quanto vou ter?
                     </button>
                     <button
-                        onClick={() => setMode(prev => prev.includes('income') ? 'income_goal' : 'goal')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode.includes('goal') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                        onClick={() => setMode('goal')}
+                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'goal' ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
                     >
                         Quanto tempo leva?
                     </button>
                 </div>
                 <div className="flex p-1 bg-white/50 dark:bg-black/20 rounded-xl">
                     <button
-                        onClick={() => setMode(prev => prev.includes('goal') ? 'goal' : 'value')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${!mode.includes('income') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                        onClick={() => setFocus('patrimonio')}
+                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'patrimonio' ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-500 dark:text-emerald-400" : "text-zinc-500"}`}
                     >
                         Patrimônio
                     </button>
                     <button
-                        onClick={() => setMode(prev => prev.includes('goal') ? 'income_goal' : 'income_value')}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode.includes('income') ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                        onClick={() => setFocus('renda')}
+                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${focus === 'renda' ? "bg-white dark:bg-zinc-700 shadow-sm text-indigo-500 dark:text-indigo-400" : "text-zinc-500"}`}
                     >
                         Renda Mensal
                     </button>
@@ -218,7 +231,7 @@ function ProjectionView({ cagr, symbol }: any) {
                     <input type="number" value={monthlyContribution} onChange={(e) => setMonthlyContribution(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
                 </div>
 
-                {mode.includes("value") ? (
+                {mode === "value" ? (
                     <div className="col-span-2 flex flex-col gap-2">
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Esperar por (Meses)</label>
                         <input type="number" value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
@@ -226,52 +239,78 @@ function ProjectionView({ cagr, symbol }: any) {
                 ) : (
                     <div className="col-span-2 flex flex-col gap-2">
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                            {mode === "income_goal" ? "Renda Alvo (R$/mês)" : "Meta (R$)"}
+                            {focus === "renda" ? "Meta Renda (R$/mês)" : "Meta Patrimônio (R$)"}
                         </label>
-                        <input type="number" value={targetAmount} onChange={(e) => setTargetAmount(Number(e.target.value))} className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200" />
+                        <input
+                            type="number"
+                            value={focus === "renda" ? targetIncome : targetAmount}
+                            onChange={(e) => focus === "renda" ? setTargetIncome(Number(e.target.value)) : setTargetAmount(Number(e.target.value))}
+                            className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl font-black text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-700 dark:text-zinc-200"
+                        />
                     </div>
                 )}
             </div>
 
             {/* Projection Result */}
-            <div className="bg-emerald-500 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group mt-2">
+            <div className={`p-6 rounded-2xl shadow-lg relative overflow-hidden group mt-2 ${focus === 'renda' ? 'bg-indigo-500' : 'bg-emerald-500'} text-white`}>
                 <div className="absolute top-0 right-0 p-24 bg-white/10 blur-[60px] rounded-full pointer-events-none group-hover:bg-white/20 transition-all duration-700" />
 
                 {mode === "value" ? (
-                    <>
-                        <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Projeção de Patrimônio</p>
-                        <div className="text-3xl font-black tracking-tighter relative z-10">
-                            R$ {projectedValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-emerald-100 text-[10px] font-medium mt-2 relative z-10 opacity-80">
-                            *Inv. total: R$ {(startAmount + (monthlyContribution * months)).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                        </div>
-                    </>
-                ) : mode === "income_value" ? (
-                    <>
-                        <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Renda Mensal Estimada</p>
-                        <div className="text-3xl font-black tracking-tighter relative z-10">
-                            R$ {projectedIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês
-                        </div>
-                        <div className="text-emerald-100 text-[10px] font-medium mt-2 relative z-10 opacity-80">
-                            *Considerando rentabilidade composta reinvestida.
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Tempo estimado</p>
-                        <div className="text-3xl font-black tracking-tighter relative z-10 flex items-baseline gap-2">
-                            {projectedYears === Infinity ? "Inalcançável" : projectedYears.toFixed(1)} <span className="text-lg">{projectedYears === Infinity ? "" : "anos"}</span>
-                        </div>
-                        {projectedYears !== Infinity && (
-                            <div className="text-emerald-100 text-sm font-medium relative z-10">
-                                ({Math.ceil(projectedMonthsToGoal)} meses)
+                    focus === "patrimonio" ? (
+                        <>
+                            <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Projeção de Patrimônio</p>
+                            <div className="text-3xl font-black tracking-tighter relative z-10">
+                                R$ {projectedValue.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                             </div>
-                        )}
-                        <div className="text-emerald-100 text-[10px] font-medium mt-2 relative z-10 opacity-80">
-                            *Considerando reinvestimento automático.
-                        </div>
-                    </>
+                            <div className="flex justify-between items-end mt-2 relative z-10">
+                                <span className="text-emerald-100 text-[10px] font-medium opacity-80 uppercase">
+                                    *Inv. total: R$ {(startAmount + (monthlyContribution * months)).toLocaleString("pt-BR")}
+                                </span>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-bold opacity-60 uppercase leading-none mb-0.5">Renda Resultante</p>
+                                    <p className="font-black text-lg leading-none">R$ {projectedIncome.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/mês</p>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Renda Mensal Estimada</p>
+                            <div className="text-3xl font-black tracking-tighter relative z-10">
+                                R$ {projectedIncome.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}/mês
+                            </div>
+                            <div className="flex justify-between items-end mt-2 relative z-10">
+                                <span className="text-indigo-100 text-[10px] font-medium opacity-80 uppercase">
+                                    *Após {months} meses
+                                </span>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-bold opacity-60 uppercase leading-none mb-0.5">Patrimônio Final</p>
+                                    <p className="font-black text-lg leading-none">R$ {projectedValue.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</p>
+                                </div>
+                            </div>
+                        </>
+                    )
+                ) : (
+                    focus === "patrimonio" ? (
+                        <>
+                            <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Tempo estimado para Meta</p>
+                            <div className="text-3xl font-black tracking-tighter relative z-10 flex items-baseline gap-2">
+                                {projectedTimeWealth === Infinity ? "Inalcançável" : (projectedTimeWealth / 12).toFixed(1)} <span className="text-lg">{projectedTimeWealth === Infinity ? "" : "anos"}</span>
+                            </div>
+                            <div className="text-emerald-100 text-[10px] font-medium mt-1 relative z-10 opacity-80 uppercase">
+                                ~ {Math.ceil(projectedTimeWealth)} meses para R$ {targetAmount.toLocaleString("pt-BR")}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Tempo para Renda Desejada</p>
+                            <div className="text-3xl font-black tracking-tighter relative z-10 flex items-baseline gap-2">
+                                {projectedTimeIncome === Infinity ? "Inalcançável" : (projectedTimeIncome / 12).toFixed(1)} <span className="text-lg">{projectedTimeIncome === Infinity ? "" : "anos"}</span>
+                            </div>
+                            <div className="text-indigo-100 text-[10px] font-medium mt-1 relative z-10 opacity-80 uppercase">
+                                ~ {Math.ceil(projectedTimeIncome)} meses para R$ {targetIncome.toLocaleString("pt-BR")}/mês
+                            </div>
+                        </>
+                    )
                 )}
             </div>
         </div>
