@@ -12,15 +12,27 @@ export interface FavoriteStock {
     addedAt: Date;
 }
 
+export interface PortfolioStock {
+    symbol: string;
+    name: string;
+    quantity: number;
+    sector?: string;
+    industry?: string;
+    type?: string;
+    addedAt: Date;
+}
+
 export class UserDatabase extends Dexie {
     searches!: Table<SearchHistory>;
     favorites!: Table<FavoriteStock>;
+    portfolio!: Table<PortfolioStock>;
 
     constructor() {
         super('B3AnalyzerDB');
-        this.version(1).stores({
-            searches: '++id, symbol, timestamp', // id is auto-incremented
-            favorites: 'symbol, name, addedAt'    // symbol is primary key
+        this.version(3).stores({
+            searches: '++id, symbol, timestamp',
+            favorites: 'symbol, name, addedAt',
+            portfolio: 'symbol, name, quantity, sector, type, addedAt'
         });
     }
 }

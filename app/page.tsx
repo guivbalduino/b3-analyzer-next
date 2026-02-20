@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, TrendingUp, Calendar, Info, Activity, Star, ArrowUpRight, Brain, ArrowRightLeft } from "lucide-react";
+import { Search, TrendingUp, Calendar, Info, Activity, Star, ArrowUpRight, Brain, ArrowRightLeft, Wallet } from "lucide-react";
 
 import ChartSection from "@/components/ChartSection";
 import StatisticsGrid from "@/components/StatisticsGrid";
@@ -157,6 +157,14 @@ export default function Home() {
             >
               <Star size={14} />
               FAVORITOS
+            </Link>
+
+            <Link
+              href="/carteira"
+              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold rounded-xl text-xs hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
+            >
+              <Wallet size={14} />
+              CARTEIRA
             </Link>
 
             <Link
@@ -334,9 +342,14 @@ export default function Home() {
                 <h3 className="flex items-center gap-2 text-zinc-400 uppercase tracking-widest text-[10px] font-black">
                   <span className="text-lg">⭐</span> Favoritos
                 </h3>
-                <Link href="/favoritos" className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1">
-                  Simular Carteira <ArrowUpRight size={10} />
-                </Link>
+                <div className="flex flex-col items-end gap-1">
+                  <Link href="/favoritos" className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                    Simular Favoritos <ArrowUpRight size={10} />
+                  </Link>
+                  <Link href="/carteira" className="text-[10px] font-black text-emerald-500 hover:text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                    Minha Carteira <Wallet size={10} />
+                  </Link>
+                </div>
               </div>
               {favorites && favorites.length > 0 ? (
                 <div className="flex flex-col gap-2">

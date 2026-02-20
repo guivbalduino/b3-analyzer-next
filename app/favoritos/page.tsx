@@ -5,7 +5,7 @@ import { useUserActions } from "@/hooks/useUserActions";
 import { useStockHistory } from "@/hooks/useStockData";
 import { calculateBacktestLogic, calculateCAGR, calculateProjectionValue, calculateProjectionTime, calculateProjectionIncome, calculateProjectionTimeForIncome } from "@/lib/simulation";
 import BatchAnalysis from "@/components/BatchAnalysis";
-import { ArrowLeft, Calculator, TrendingUp, Trophy, AlertCircle, Clock, Target, ArrowUpRight, Info, Star, ChevronUp, X, Sparkles, Download, Upload } from "lucide-react";
+import { ArrowLeft, Calculator, TrendingUp, Trophy, AlertCircle, Clock, Target, ArrowUpRight, Info, Star, ChevronUp, X, Sparkles, Download, Upload, Wallet } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +62,22 @@ export default function FavoritesPage() {
                         </div>
 
                         <div className="flex items-center gap-2 ml-auto">
+                            <Link
+                                href="/carteira"
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 group text-zinc-600 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all border border-zinc-200 dark:border-zinc-700 shadow-sm"
+                            >
+                                <Wallet size={14} className="text-emerald-500 group-hover:text-white transition-colors" />
+                                <span className="hidden sm:inline">Minha Carteira</span>
+                            </Link>
+
+                            <Link
+                                href="/favoritos/dividendos"
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95"
+                            >
+                                <TrendingUp size={14} />
+                                <span className="hidden sm:inline">Mapa de Dividendos</span>
+                            </Link>
+
                             <Link
                                 href="/favoritos/import"
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-xl text-xs font-bold transition-colors border border-zinc-200 dark:border-zinc-700"

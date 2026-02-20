@@ -81,7 +81,7 @@ export async function generateStockAnalysis(
     priceData: any,
     historicalData: any[],
     newsData: any[],
-    modelName: string = "gemini-2.5-flash-lite",
+    modelName: string = "gemini-2.5-flash",
     analysisType: string = "completa"
 ) {
     // Format data into XML for better LLM parsing

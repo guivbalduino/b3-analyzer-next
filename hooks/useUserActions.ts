@@ -42,12 +42,12 @@ export function useUserActions() {
         }
     }, []);
 
-    const bulkAddFavorites = useCallback(async (symbols: string[]) => {
+    const bulkAddFavorites = useCallback(async (stocks: { symbol: string, name: string }[]) => {
         try {
             const now = new Date();
-            const favoriteStocks = symbols.map(symbol => ({
-                symbol: symbol.toUpperCase().trim(),
-                name: symbol.toUpperCase().trim(), // Using symbol as name initially
+            const favoriteStocks = stocks.map(s => ({
+                symbol: s.symbol.toUpperCase().trim(),
+                name: s.name,
                 addedAt: now
             }));
 
